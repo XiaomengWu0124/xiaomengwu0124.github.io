@@ -1,0 +1,64 @@
+/* ============================================
+   Subtle Animations — Fade-ins & Reveals
+   ============================================ */
+
+/* --- Scroll Reveal --- */
+.reveal {
+  opacity: 0;
+  transform: translateY(15px);
+  transition: opacity 0.6s ease, transform 0.6s ease;
+}
+
+.reveal--visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* Stagger children */
+.reveal-stagger > * {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+
+.reveal-stagger--visible > *:nth-child(1) { transition-delay: 0s; }
+.reveal-stagger--visible > *:nth-child(2) { transition-delay: 0.06s; }
+.reveal-stagger--visible > *:nth-child(3) { transition-delay: 0.12s; }
+.reveal-stagger--visible > *:nth-child(4) { transition-delay: 0.18s; }
+.reveal-stagger--visible > *:nth-child(5) { transition-delay: 0.24s; }
+.reveal-stagger--visible > *:nth-child(6) { transition-delay: 0.3s; }
+.reveal-stagger--visible > *:nth-child(7) { transition-delay: 0.36s; }
+.reveal-stagger--visible > *:nth-child(8) { transition-delay: 0.42s; }
+
+.reveal-stagger--visible > * {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+/* --- Page entrance --- */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+.content {
+  animation: fadeIn 0.5s ease both;
+}
+
+/* --- Reduced Motion --- */
+@media (prefers-reduced-motion: reduce) {
+  .reveal,
+  .reveal-stagger > * {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
+
+  .content {
+    animation: none;
+  }
+
+  * {
+    transition-duration: 0.01ms !important;
+  }
+}
