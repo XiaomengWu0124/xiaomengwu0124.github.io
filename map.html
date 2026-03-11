@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Map — Xiaomeng Wu</title>
+  <meta name="description" content="Places I've been, things I've seen.">
+  <link rel="stylesheet" href="css/style.css">
+  <link rel="stylesheet" href="css/animations.css">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <style>
+    /* Map page: content fills viewport */
+    .map-page .content {
+      padding: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+      max-width: none;
+    }
+
+    .map-header {
+      padding: var(--space-md) var(--space-lg);
+      border-bottom: 1px solid var(--color-border);
+      flex-shrink: 0;
+    }
+
+    .map-header h1 {
+      font-size: 1.6rem;
+      margin-bottom: 0.25rem;
+    }
+
+    .map-header p {
+      font-size: 0.85rem;
+      color: var(--color-text-light);
+      margin-bottom: 0;
+    }
+
+    #map {
+      flex: 1;
+      width: 100%;
+      min-height: 0;
+    }
+
+    /* Custom marker */
+    .map-marker {
+      width: 12px;
+      height: 12px;
+      background: var(--color-accent);
+      border: 2px solid #fff;
+      border-radius: 50%;
+      box-shadow: 0 1px 4px rgba(0,0,0,0.3);
+      cursor: pointer;
+      transition: transform 0.2s ease;
+    }
+
+    .map-marker:hover {
+      transform: scale(1.4);
+    }
+
+    /* Popup styling */
+    .leaflet-popup-content-wrapper {
+      border-radius: 4px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.12);
+      font-family: var(--font-sans);
+      padding: 0;
+      overflow: hidden;
+    }
+
+    .leaflet-popup-content {
+      margin: 0;
+      min-width: 240px;
+      max-width: 320px;
+    }
+
+    .leaflet-popup-tip {
+      box-shadow: 0 2px 12px rgba(0,0,0,0.08);
+    }
+
+    .popup-card {
+      overflow: hidden;
+    }
+
+    .popup-card__img {
+      width: 100%;
+      height: 180px;
+      object-fit: cover;
+      display: block;
+    }
+
+    .popup-card__body {
+      padding: 1rem 1.2rem;
+    }
+
+    .popup-card__place {
+      font-size: 0.95rem;
+      font-weight: 500;
+      margin-bottom: 0.25rem;
+    }
+
+    .popup-card__date {
+      font-size: 0.7rem;
+      color: var(--color-text-faint);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      margin-bottom: 0.6rem;
+    }
+
+    .popup-card__thought {
+      font-size: 0.85rem;
+      color: var(--color-text-light);
+      line-height: 1.6;
+      margin-bottom: 0;
+    }
+
+    /* No-image variant */
+    .popup-card--no-img .popup-card__body {
+      padding: 1rem 1.2rem;
+    }
+
+    /* Zoom hint */
+    .map-hint {
+      position: absolute;
+      bottom: 2rem;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      font-family: var(--font-sans);
+      font-size: 0.75rem;
+      color: var(--color-text-light);
+      background: rgba(255,255,255,0.92);
+      padding: 0.4rem 1rem;
+      border-radius: 20px;
+      box-shadow: 0 1px 6px rgba(0,0,0,0.1);
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+    }
+
+    .map-hint--hidden {
+      opacity: 0;
+    }
+
+    /* Leaflet zoom control restyle */
+    .leaflet-control-zoom a {
+      font-family: var(--font-sans) !important;
+      color: var(--color-text) !important;
+      border-color: var(--color-border) !important;
+    }
+
+    @media (max-width: 768px) {
+      .map-header {
+        padding: var(--space-sm) var(--space-md);
+        padding-top: calc(var(--space-sm) + 50px);
+      }
+
+      .map-header h1 {
+        font-size: 1.3rem;
+      }
+
+      .leaflet-popup-content {
+        min-width: 200px;
+        max-width: 260px;
+      }
+
+      .popup-card__img {
+        height: 140px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="page map-page">
+
+    <aside class="sidebar" id="sidebar">
+      <div>
+        <a href="index.html" class="sidebar__name">Xiaomeng Wu</a>
+        <p class="sidebar__tagline">University of Pennsylvania</p>
+      </div>
+      <nav class="sidebar__nav">
+        <a href="index.html" class="sidebar__link">Home</a>
+        <a href="gallery.html" class="sidebar__link">Gallery</a>
+        <a href="map.html" class="sidebar__link sidebar__link--active">Map</a>
+        <a href="writing.html" class="sidebar__link">Writing</a>
+        <a href="about.html" class="sidebar__link">About</a>
+      </nav>
+      <div class="sidebar__footer">
+        <div class="sidebar__social">
+          <a href="#">Instagram</a>
+          <a href="mailto:xmwu0124@gmail.com">Email</a>
+        </div>
+      </div>
+    </aside>
+
+    <button class="nav-toggle" id="navToggle" aria-label="Menu">
+      <span></span>
+    </button>
+
+    <main class="content">
+
+      <div class="map-header">
+        <h1>Map</h1>
+        <p>Places I've been, things I've seen. Zoom in to discover more.</p>
+      </div>
+
+      <div id="map"></div>
+      <div class="map-hint" id="mapHint">Scroll to zoom &middot; Click a point for details</div>
+
+    </main>
+  </div>
+
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+  (function () {
+    'use strict';
+
+    // ==========================================
+    //  MAP DATA — Add your places here!
+    //  Each entry can have: lat, lng, place, date, thought, image (optional)
+    //  Set minZoom to control when a point appears (higher = only visible when zoomed in)
+    // ==========================================
+    var places = [
+      // ========== 2023 ==========
+      // Nov — Paris
+      { lat: 48.8606, lng: 2.3376, place: 'Paris', date: 'Nov 2023', thought: '', image: '', minZoom: 0 },
+      { lat: 48.8611, lng: 2.3364, place: 'Musée du Louvre', date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8600, lng: 2.3266, place: "Musée d'Orsay", date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8607, lng: 2.3525, place: 'Centre Pompidou', date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8738, lng: 2.2950, place: 'Palais de Tokyo', date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8648, lng: 2.3132, place: "Musée de l'Orangerie", date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8844, lng: 2.3431, place: 'Musée Rodin', date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8530, lng: 2.3499, place: 'Fondation Cartier', date: 'Nov 2023', thought: '', image: '', minZoom: 10 },
+      // Dec — Scandinavia
+      { lat: 55.6761, lng: 12.5683, place: 'Copenhagen', date: 'Dec 2023', thought: '', image: '', minZoom: 0 },
+      { lat: 55.6714, lng: 12.5584, place: 'Ny Carlsberg Glyptotek', date: 'Dec 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 55.6886, lng: 12.5782, place: 'SMK — National Gallery of Denmark', date: 'Dec 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 59.9139, lng: 10.7522, place: 'Oslo', date: 'Dec 2023', thought: '', image: '', minZoom: 0 },
+      { lat: 59.9063, lng: 10.7533, place: 'Munch Museum', date: 'Dec 2023', thought: '', image: '', minZoom: 10 },
+      { lat: 69.6496, lng: 18.9560, place: 'Tromsø', date: 'Dec 2023', thought: '', image: '', minZoom: 0 },
+
+      // ========== 2024 ==========
+      // Jan
+      { lat: -8.4095, lng: 115.1889, place: 'Bali', date: 'Jan 2024', thought: '', image: '', minZoom: 0 },
+      // Mar
+      { lat: 1.3521, lng: 103.8198, place: 'Singapore', date: 'Mar 2024', thought: '', image: '', minZoom: 0 },
+      { lat: 1.2902, lng: 103.8515, place: 'National Gallery Singapore', date: 'Mar 2024', thought: '', image: '', minZoom: 10 },
+      // May
+      { lat: 33.4996, lng: 126.5312, place: 'Jeju Island', date: 'May 2024', thought: '', image: '', minZoom: 0 },
+      // Jul — Egypt
+      { lat: 30.0444, lng: 31.2357, place: 'Cairo', date: 'Jul 2024', thought: '', image: '', minZoom: 0 },
+      { lat: 30.0478, lng: 31.2336, place: 'Egyptian Museum', date: 'Jul 2024', thought: '', image: '', minZoom: 10 },
+      { lat: 30.0098, lng: 31.2543, place: 'Museum of Islamic Art', date: 'Jul 2024', thought: '', image: '', minZoom: 10 },
+      { lat: 25.6872, lng: 32.6396, place: 'Luxor', date: 'Jul 2024', thought: '', image: '', minZoom: 5 },
+      { lat: 24.0889, lng: 32.8998, place: 'Aswan', date: 'Jul 2024', thought: '', image: '', minZoom: 5 },
+      // Dec — Europe
+      { lat: 41.3874, lng: 2.1686, place: 'Barcelona', date: 'Dec 2024', thought: '', image: '', minZoom: 0 },
+      { lat: 41.3851, lng: 2.1808, place: 'Museu Picasso', date: 'Dec 2024', thought: '', image: '', minZoom: 10 },
+      { lat: 41.3685, lng: 2.1599, place: 'Fundació Joan Miró', date: 'Dec 2024', thought: '', image: '', minZoom: 10 },
+      { lat: 41.3833, lng: 2.1669, place: 'MACBA', date: 'Dec 2024', thought: '', image: '', minZoom: 10 },
+      { lat: 40.4168, lng: -3.7038, place: 'Madrid', date: 'Dec 2024', thought: '', image: '', minZoom: 5 },
+      { lat: 48.8566, lng: 2.3522, place: 'Paris', date: 'Dec 2024', thought: '', image: 'assets/photo-paris.jpg', minZoom: 0 },
+      { lat: 41.9028, lng: 12.4964, place: 'Rome', date: 'Dec 2024', thought: '', image: '', minZoom: 0 },
+
+      // ========== 2025 ==========
+      // Mar
+      { lat: 41.8781, lng: -87.6298, place: 'Chicago', date: 'Mar 2025', thought: '', image: '', minZoom: 0 },
+      { lat: 41.8796, lng: -87.6237, place: 'Art Institute of Chicago', date: 'Mar 2025', thought: '', image: '', minZoom: 10 },
+      { lat: 41.8972, lng: -87.6214, place: 'MCA Chicago', date: 'Mar 2025', thought: '', image: '', minZoom: 10 },
+      { lat: 42.3601, lng: -71.0589, place: 'Boston', date: 'Mar 2025', thought: '', image: '', minZoom: 5 },
+      { lat: 42.3394, lng: -71.0940, place: 'Museum of Fine Arts', date: 'Mar 2025', thought: '', image: '', minZoom: 10 },
+      // Jun
+      { lat: 39.9042, lng: 116.4074, place: 'Back Home', date: 'Jun 2025', thought: '', image: '', minZoom: 0 },
+      // Nov
+      { lat: 39.9242, lng: 116.4274, place: 'Beijing', date: 'Nov 2025', thought: '', image: '', minZoom: 5 },
+      // Dec
+      { lat: 41.4074, lng: 2.1886, place: 'Barcelona', date: 'Dec 2025', thought: '', image: '', minZoom: 5 },
+
+      // ========== 2026 ==========
+      // Jan
+      { lat: 48.8766, lng: 2.3322, place: 'Paris', date: 'Jan 2026', thought: '', image: '', minZoom: 5 },
+      { lat: 48.2082, lng: 16.3738, place: 'Vienna', date: 'Jan 2026', thought: '', image: '', minZoom: 0 },
+      { lat: 48.2034, lng: 16.3614, place: 'Kunsthistorisches Museum', date: 'Jan 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 48.1915, lng: 16.3808, place: 'Belvedere', date: 'Jan 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 48.2084, lng: 16.3658, place: 'Albertina', date: 'Jan 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 21.0285, lng: 105.8542, place: 'Hanoi', date: 'Jan 2026', thought: '', image: '', minZoom: 0 },
+      { lat: 21.0258, lng: 105.8342, place: 'Vietnam National Museum of Fine Arts', date: 'Jan 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 25.2854, lng: 51.5310, place: 'Doha', date: 'Jan 2026', thought: '', image: '', minZoom: 0 },
+      // Feb
+      { lat: 38.7223, lng: -9.1393, place: 'Lisbon', date: 'Feb 2026', thought: '', image: '', minZoom: 0 },
+      { lat: 41.1579, lng: -8.6291, place: 'Porto', date: 'Feb 2026', thought: '', image: '', minZoom: 5 },
+      // Mar
+      { lat: 55.6761, lng: 12.5683, place: 'Copenhagen', date: 'Mar 2026', thought: '', image: '', minZoom: 0 },
+      { lat: 52.3676, lng: 4.9041, place: 'Amsterdam', date: 'Mar 2026', thought: '', image: '', minZoom: 5 },
+      { lat: 52.3600, lng: 4.8852, place: 'Rijksmuseum', date: 'Mar 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 52.3584, lng: 4.8811, place: 'Van Gogh Museum', date: 'Mar 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 52.3580, lng: 4.8798, place: 'Stedelijk Museum', date: 'Mar 2026', thought: '', image: '', minZoom: 10 },
+      { lat: 48.8466, lng: 2.3722, place: 'Paris', date: 'Mar 2026', thought: '', image: '', minZoom: 5 },
+      { lat: 51.5074, lng: -0.1278, place: 'London', date: 'Mar 2026', thought: '', image: '', minZoom: 5 },
+      { lat: 53.4808, lng: -2.2426, place: 'Manchester', date: 'Mar 2026', thought: '', image: '', minZoom: 5 },
+      // May
+      { lat: 40.7608, lng: -111.8910, place: 'Salt Lake City', date: 'May 2026', thought: '', image: '', minZoom: 0 },
+      { lat: 44.4280, lng: -110.5885, place: 'Yellowstone National Park', date: 'May 2026', thought: '', image: '', minZoom: 0 }
+    ];
+
+    // ==========================================
+    //  MAP SETUP
+    // ==========================================
+
+    // Muted, clean tile layer (CartoDB Positron — matches the site aesthetic)
+    var map = L.map('map', {
+      center: [35, 30],
+      zoom: 3,
+      minZoom: 2,
+      maxZoom: 18,
+      zoomControl: true,
+      scrollWheelZoom: true
+    });
+
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+      attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> &copy; <a href="https://carto.com/">CARTO</a>',
+      subdomains: 'abcd',
+      maxZoom: 20
+    }).addTo(map);
+
+    // ==========================================
+    //  MARKERS
+    // ==========================================
+
+    var markers = [];
+    var accentColor = getComputedStyle(document.documentElement).getPropertyValue('--color-accent').trim() || '#c45a3c';
+
+    places.forEach(function (p) {
+      var icon = L.divIcon({
+        className: '',
+        html: '<div class="map-marker"></div>',
+        iconSize: [12, 12],
+        iconAnchor: [6, 6],
+        popupAnchor: [0, -8]
+      });
+
+      var marker = L.marker([p.lat, p.lng], { icon: icon });
+
+      // Build popup HTML
+      var popupHtml = '<div class="popup-card' + (p.image ? '' : ' popup-card--no-img') + '">';
+      if (p.image) {
+        popupHtml += '<img class="popup-card__img" src="' + p.image + '" alt="' + p.place + '">';
+      }
+      popupHtml += '<div class="popup-card__body">';
+      popupHtml += '<div class="popup-card__place">' + p.place + '</div>';
+      if (p.date) {
+        popupHtml += '<div class="popup-card__date">' + p.date + '</div>';
+      }
+      if (p.thought) {
+        popupHtml += '<p class="popup-card__thought">' + p.thought + '</p>';
+      }
+      popupHtml += '</div></div>';
+
+      marker.bindPopup(popupHtml, {
+        maxWidth: 320,
+        minWidth: 200,
+        closeButton: true
+      });
+
+      // Store minZoom on marker for filtering
+      marker._placeMinZoom = p.minZoom || 0;
+      markers.push(marker);
+    });
+
+    // Show/hide markers based on zoom level
+    function updateMarkers() {
+      var zoom = map.getZoom();
+      markers.forEach(function (m) {
+        if (zoom >= m._placeMinZoom) {
+          if (!map.hasLayer(m)) map.addLayer(m);
+        } else {
+          if (map.hasLayer(m)) map.removeLayer(m);
+        }
+      });
+    }
+
+    map.on('zoomend', updateMarkers);
+    updateMarkers();
+
+    // ==========================================
+    //  HINT — fade out after first interaction
+    // ==========================================
+    var hint = document.getElementById('mapHint');
+    var hintDismissed = false;
+
+    function dismissHint() {
+      if (!hintDismissed) {
+        hintDismissed = true;
+        hint.classList.add('map-hint--hidden');
+      }
+    }
+
+    map.on('zoomstart', dismissHint);
+    map.on('movestart', dismissHint);
+
+  })();
+  </script>
+</body>
+</html>
